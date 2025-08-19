@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Checker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
+    <meta name="description" content="Cross-browser compatible website checker tool">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div class="container">
+        <h1>Website Checker</h1>
+        <div class="input-group">
+            <input type="url" id="urlInput" placeholder="Enter website URL (e.g., https://example.com)" required>
+            <button id="checkButton">Test</button>
+        </div>
+        <div id="results" class="hidden">
+            <h2>Website Check Results</h2>
+            <div class="sections-container">
+                <div class="section" id="functionalitySection">
+                    <h3>Functionality</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Check</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="functionalityTable"></tbody>
+                    </table>
+                </div>
+                <div class="section" id="securitySection">
+                    <h3>Security</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Check</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="securityTable"></tbody>
+                    </table>
+                </div>
+                <div class="section" id="seoSection">
+                    <h3>SEO</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Check</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="seoTable"></tbody>
+                    </table>
+                </div>
+                <div class="section" id="uiFeaturesSection">
+                    <h3>UI Features</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Check</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uifeaturesTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="download-buttons">
+                <button id="downloadExcel">Download Excel</button>
+                <button id="downloadPDF">Download PDF</button>
+            </div>
+        </div>
+        <div id="error" class="hidden">
+            <p class="error-message"></p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

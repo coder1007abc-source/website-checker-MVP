@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: website-checker
+    env: node
+    buildCommand: |
+      chmod +x ./scripts/install-chrome.sh
+      ./scripts/install-chrome.sh
+      npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CHROME_PATH
+        value: /usr/bin/google-chrome
+    buildFilter:
+      paths:
+        - package.json
+        - package-lock.json
+        - server.js
+        - public/**
