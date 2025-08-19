@@ -13,6 +13,112 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Function to normalize URL (convert relative to absolute)
+function normalizeUrl(baseUrl, href) {
+    try {
+        const resolved = new URL(href, baseUrl);
+        return resolved.toString();
+    } catch (error) {
+        return null;
+    }
+}
+
+// Function to extract unique links from HTML
+async function extractLinks(url) {
+    try {
+        const response = await axios.get(url, {
+            timeout: 30000,
+            httpsAgent: new https.Agent({ 
+                rejectUnauthorized: false,
+                timeout: 30000 
+            })
+        });
+        const $ = cheerio.load(response.data);
+        const links = new Set();
+
+        $('a[href]').each((_, element) => {
+            const href = $(element).attr('href');
+            const absoluteUrl = normalizeUrl(url, href);
+            if (absoluteUrl && absoluteUrl.startsWith('http')) {
+                links.add(absoluteUrl);
+            }
+        });
+
+        return Array.from(links);
+    } catch (error) {
+        console.error(`Error extracting links from ${url}:`, error.message);
+        return [];
+    }
+}
+
+// Function to test a single URL and return results
+async function testSingleUrl(url) {
+    // Create a mini version of the check function that doesn't recursively test links
+    try {
+        const response = await axios.get(url, {
+            timeout: 30000,
+            httpsAgent: new https.Agent({ 
+                rejectUnauthorized: false,
+                timeout: 30000 
+            })
+        });
+
+        const results = {
+            url,
+            statusCode: response.status,
+            Functionality: {
+                'Page Loads': true,
+                'Status Code': response.status === 200,
+                'Response Time': response.status === 200
+            },
+            Security: {
+                'HTTPS': url.startsWith('https'),
+                'Valid SSL': response.status === 200
+            }
+        };
+
+        return results;
+    } catch (error) {
+        return {
+            url,
+            statusCode: error.response?.status || 500,
+            error: error.message,
+            Functionality: {
+                'Page Loads': false,
+                'Status Code': false,
+                'Response Time': false
+            },
+            Security: {
+                'HTTPS': url.startsWith('https'),
+                'Valid SSL': false
+            }
+        };
+    }
+}
+
+// Main function to test all links
+async function testLinksOfLinks(url) {
+    const links = await extractLinks(url);
+    const results = {
+        totalLinks: links.length,
+        testedLinks: 0,
+        linkResults: []
+    };
+
+    // Test each link in parallel, but limit concurrency
+    const batchSize = 5;
+    for (let i = 0; i < links.length; i += batchSize) {
+        const batch = links.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+            batch.map(link => testSingleUrl(link))
+        );
+        results.linkResults.push(...batchResults);
+        results.testedLinks += batchResults.length;
+    }
+
+    return results;
+}
+
 // CORS configuration
 const corsOptions = {
     origin: ['http://localhost:3000', 'https://localhost:3000'],
@@ -25,14 +131,84 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static('public'));
 
+async function parseSitemap(sitemapUrl) {
+    try {
+        const response = await axios.get(sitemapUrl, {
+            timeout: 30000,
+            httpsAgent: new https.Agent({ 
+                rejectUnauthorized: false,
+                timeout: 30000 
+            })
+        });
+        
+        const $ = cheerio.load(response.data, { xmlMode: true });
+        const urls = [];
+        
+        // Parse both standard sitemap and news sitemap formats
+        $('url > loc, sitemap > loc').each((i, elem) => {
+            const url = $(elem).text().trim();
+            if (url && url.startsWith('http')) {
+                urls.push(url);
+            }
+        });
+        
+        return {
+            success: true,
+            urls: urls,
+            count: urls.length
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message,
+            urls: [],
+            count: 0
+        };
+    }
+}
+
+function isValidUrl(urlString) {
+    try {
+        new URL(urlString);
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
 app.post('/check', async (req, res) => {
-    const { url } = req.body;
+    const { url, sitemapUrl } = req.body;
+    
+    if (!url || !isValidUrl(url)) {
+        return res.status(400).json({ error: 'Invalid website URL' });
+    }
+
+    if (sitemapUrl && !isValidUrl(sitemapUrl)) {
+        return res.status(400).json({ error: 'Invalid sitemap URL' });
+    }
+
     const results = {
         Functionality: {},
         Security: {},
         SEO: {},
-        UIFeatures: {}
+        UIFeatures: {},
+        Sitemap: {},
+        TestLinksOfLinks: null
     };
+
+    // If sitemapUrl is provided, test all links in it
+    if (sitemapUrl) {
+        results.TestLinksOfLinks = await testLinksOfLinks(sitemapUrl);
+    }
+
+    if (sitemapUrl) {
+        const sitemapResults = await parseSitemap(sitemapUrl);
+        results.Sitemap = {
+            'Total URLs Found': sitemapResults.success ? sitemapResults.count : 0,
+            'Sitemap Status': sitemapResults.success ? 'Valid' : 'Invalid',
+            'Parse Error': sitemapResults.success ? 'None' : sitemapResults.error
+        };
+    }
 
     let browser;
     let page;
@@ -79,6 +255,11 @@ app.post('/check', async (req, res) => {
                 console.warn('No browser path found, using default configuration');
             }
 
+            const isWindows = process.platform === 'win32';
+            const defaultChromePath = isWindows 
+                ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+                : '/usr/bin/google-chrome';
+
             browser = await puppeteer.launch({ 
                 args: [
                     '--no-sandbox',
@@ -89,7 +270,7 @@ app.post('/check', async (req, res) => {
                     '--disable-accelerated-2d-canvas'
                 ],
                 headless: 'new',
-                executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome'
+                executablePath: process.env.CHROME_PATH || defaultChromePath
             });
             console.log('Puppeteer launched successfully');
             
@@ -319,10 +500,54 @@ app.post('/download/excel', async (req, res) => {
         }
         
         console.log('Creating Excel workbook...');
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Website Check Results');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Results');
+    
+    // Add TestLinksOfLinks worksheet if data exists
+    if (results.TestLinksOfLinks) {
+        const linksWorksheet = workbook.addWorksheet('TestLinksOfLinks');
         
-        worksheet.columns = [
+        // Set up headers
+        linksWorksheet.columns = [
+            { header: 'Tested URL', key: 'url', width: 50 },
+            { header: 'Status Code', key: 'statusCode', width: 15 },
+            { header: 'Test Case', key: 'testCase', width: 30 },
+            { header: 'Status', key: 'status', width: 15 }
+        ];
+
+        // Add data rows
+        results.TestLinksOfLinks.linkResults.forEach(linkResult => {
+            const baseRow = {
+                url: linkResult.url,
+                statusCode: linkResult.statusCode
+            };
+
+            // Add Functionality results
+            Object.entries(linkResult.Functionality || {}).forEach(([test, value]) => {
+                linksWorksheet.addRow({
+                    ...baseRow,
+                    testCase: `Functionality - ${test}`,
+                    status: value ? 'Passed' : 'Failed'
+                });
+            });
+
+            // Add Security results
+            Object.entries(linkResult.Security || {}).forEach(([test, value]) => {
+                linksWorksheet.addRow({
+                    ...baseRow,
+                    testCase: `Security - ${test}`,
+                    status: value ? 'Passed' : 'Failed'
+                });
+            });
+        });
+
+        // Style the worksheet
+        linksWorksheet.getRow(1).font = { bold: true };
+        linksWorksheet.autoFilter = {
+            from: 'A1',
+            to: 'D1'
+        };
+    }        worksheet.columns = [
             { header: 'Category', key: 'category', width: 20 },
             { header: 'Test', key: 'test', width: 30 },
             { header: 'Status', key: 'status', width: 20 }

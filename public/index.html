@@ -12,12 +12,22 @@
 <body>
     <div class="container">
         <h1>Website Checker</h1>
-        <div class="input-group">
-            <input type="url" id="urlInput" placeholder="Enter website URL (e.g., https://example.com)" required>
+        <div class="input-container">
+            <div class="input-group">
+                <input type="url" id="urlInput" placeholder="Enter website URL (e.g., https://example.com)" required>
+            </div>
+            <div class="checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="wholeWebsiteCheck">
+                    Whole Website
+                    <span class="checkbox-tooltip" title="Test all pages found on this website">ⓘ</span>
+                </label>
+            </div>
             <button id="checkButton">Test</button>
         </div>
         <div id="results" class="hidden">
             <h2>Website Check Results</h2>
+            <!-- Main test results -->
             <div class="sections-container">
                 <div class="section" id="functionalitySection">
                     <h3>Functionality</h3>
@@ -66,6 +76,29 @@
                         </thead>
                         <tbody id="uifeaturesTable"></tbody>
                     </table>
+                </div>
+                <div class="section" id="sitemapSection">
+                    <h3>Sitemap Analysis</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Check</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sitemapTable"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Link Analysis section -->
+            <div class="section" id="testLinksSection" style="display: none; margin-top: 30px; border-top: 2px solid #eee;">
+                <h3>Links Analysis</h3>
+                <div class="links-summary">
+                    <p>Total Links Found: <span id="totalLinksCount">0</span></p>
+                    <p>Links Tested: <span id="testedLinksCount">0</span></p>
+                </div>
+                <div class="links-results">
+                    <div id="linksAccordion"></div>
                 </div>
             </div>
             <div class="download-buttons">

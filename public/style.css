@@ -48,16 +48,73 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+#checkButton {
+    align-self: flex-end;
+    min-width: 100px;
+    margin-top: 5px;
+}
+
 h1 {
     text-align: center;
     margin-bottom: 20px;
     color: #333;
 }
 
+.input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
 .input-group {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    width: 100%;
+}
+
+.input-group input {
+    flex: 1;
+}
+
+.checkbox-group {
+    margin: 10px 0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.checkbox-tooltip {
+    color: #6c757d;
+    cursor: help;
+    font-size: 14px;
+    border-radius: 50%;
+    margin-left: 4px;
+}
+
+.tooltip-text {
+    position: fixed;
+    background-color: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 1000;
+    pointer-events: none;
+    max-width: 200px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 input[type="url"] {
@@ -115,6 +172,119 @@ th {
 
 .failure {
     color: #dc3545;
+}
+
+#sitemap {
+    border-top: 2px solid #e8e8e8;
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+#sitemap .status-valid {
+    color: #28a745;
+}
+
+#sitemap .status-invalid {
+    color: #dc3545;
+}
+
+.links-summary {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #e9ecef;
+}
+
+#testLinksSection {
+    padding-top: 30px;
+    margin-top: 30px;
+}
+
+.links-summary p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.link-result {
+    margin-bottom: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
+.link-header {
+    padding: 10px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.link-url-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0; /* Required for text-overflow to work */
+}
+
+.link-url {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.copy-button {
+    padding: 4px 8px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    min-width: 70px;
+}
+
+.copy-button:hover {
+    background-color: #f8f9fa;
+    border-color: #c1c9d0;
+}
+
+.copy-button.copied {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.link-content {
+    padding: 15px;
+    display: none;
+}
+
+.link-content.active {
+    display: block;
+}
+
+.link-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 3px;
+}
+
+.status-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    color: #721c24;
 }
 
 .error-message {

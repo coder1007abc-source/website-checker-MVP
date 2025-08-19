@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'functionality', name: 'Functionality' },
         { id: 'security', name: 'Security' },
         { id: 'seo', name: 'SEO' },
-        { id: 'uifeatures', name: 'UIFeatures' }
+        { id: 'uifeatures', name: 'UIFeatures' },
+        { id: 'sitemap', name: 'Sitemap' }
     ];
     let lastResults = null; // Store the last test results
 
@@ -19,11 +20,52 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(errorMessage);
     }
 
+    function isValidUrl(urlString) {
+        try {
+            new URL(urlString);
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    // Add tooltip functionality
+    const tooltip = document.querySelector('.checkbox-tooltip');
+    if (tooltip) {
+        tooltip.addEventListener('mouseover', (e) => {
+            const title = e.target.getAttribute('title');
+            if (!title) return;
+            
+            const tooltipDiv = document.createElement('div');
+            tooltipDiv.className = 'tooltip-text';
+            tooltipDiv.textContent = title;
+            document.body.appendChild(tooltipDiv);
+            
+            const rect = e.target.getBoundingClientRect();
+            tooltipDiv.style.top = rect.bottom + 5 + 'px';
+            tooltipDiv.style.left = rect.left + 'px';
+            
+            e.target.addEventListener('mouseout', () => tooltipDiv.remove(), { once: true });
+        });
+    }
+
     checkButton.addEventListener('click', async () => {
-        const url = urlInput.value.trim();
+        if (!urlInput) {
+            console.error('URL input element not found');
+            return;
+        }
+
+        const url = (urlInput.value || '').trim();
+        const isWholeWebsite = document.getElementById('wholeWebsiteCheck')?.checked || false;
         
+        // Validate main URL
         if (!url) {
-            showError('Please enter a valid URL');
+            showError('Please enter a website URL');
+            return;
+        }
+        
+        if (!isValidUrl(url)) {
+            showError('Please enter a valid website URL (e.g., https://example.com)');
             return;
         }
 
@@ -49,7 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                 },
                 credentials: 'include',
-                body: JSON.stringify({ url })
+                body: JSON.stringify({ 
+                    url, 
+                    sitemapUrl: isWholeWebsite ? url : undefined 
+                })
             });
 
             if (!response.ok) {
@@ -61,6 +106,91 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show results div before updating tables
             resultsDiv.classList.remove('hidden');
+
+            // Handle TestLinksOfLinks results if available
+            const testLinksSection = document.getElementById('testLinksSection');
+            if (results.TestLinksOfLinks) {
+                testLinksSection.style.display = 'block';
+                document.getElementById('totalLinksCount').textContent = results.TestLinksOfLinks.totalLinks;
+                document.getElementById('testedLinksCount').textContent = results.TestLinksOfLinks.testedLinks;
+
+                const linksAccordion = document.getElementById('linksAccordion');
+                linksAccordion.innerHTML = ''; // Clear existing results
+
+                results.TestLinksOfLinks.linkResults.forEach((linkResult, index) => {
+                    const linkElement = document.createElement('div');
+                    linkElement.className = 'link-result';
+                    
+                    const statusClass = linkResult.statusCode === 200 ? 'status-success' : 'status-error';
+                    const statusText = linkResult.statusCode === 200 ? 'Success' : 'Error';
+                    
+                    const truncateUrl = (url, maxLength = 60) => {
+                        if (url.length <= maxLength) return url;
+                        const start = url.substring(0, maxLength);
+                        return `${start}...`;
+                    };
+
+                    const createCopyButton = (url) => {
+                        const button = document.createElement('button');
+                        button.className = 'copy-button';
+                        button.textContent = 'Copy URL';
+                        button.onclick = async (e) => {
+                            e.stopPropagation(); // Prevent accordion from toggling
+                            try {
+                                await navigator.clipboard.writeText(url);
+                                button.textContent = 'Copied!';
+                                button.classList.add('copied');
+                                setTimeout(() => {
+                                    button.textContent = 'Copy URL';
+                                    button.classList.remove('copied');
+                                }, 2000);
+                            } catch (err) {
+                                console.error('Failed to copy:', err);
+                            }
+                        };
+                        return button;
+                    };
+
+                    linkElement.innerHTML = `
+                        <div class="link-header">
+                            <div class="link-url-container" title="${linkResult.url}">
+                                <span class="link-url">${truncateUrl(linkResult.url)}</span>
+                            </div>
+                            <span class="link-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="link-content">
+                            <h4>Status Code: ${linkResult.statusCode}</h4>
+                            <div class="test-results">
+                                ${Object.entries(linkResult.Functionality || {})
+                                    .map(([test, value]) => `
+                                        <p>${test}: <span class="${value ? 'success' : 'failure'}">${value ? '✓' : '✗'}</span></p>
+                                    `).join('')}
+                                ${Object.entries(linkResult.Security || {})
+                                    .map(([test, value]) => `
+                                        <p>${test}: <span class="${value ? 'success' : 'failure'}">${value ? '✓' : '✗'}</span></p>
+                                    `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add the copy button to the header after HTML is set
+                    const header = linkElement.querySelector('.link-header');
+                    const urlContainer = header.querySelector('.link-url-container');
+                    const copyButton = createCopyButton(linkResult.url);
+                    urlContainer.appendChild(copyButton);
+
+                    // Add click handler for accordion toggle
+                    header.addEventListener('click', (e) => {
+                        if (!e.target.matches('.copy-button')) {
+                            linkElement.querySelector('.link-content').classList.toggle('active');
+                        }
+                    });
+
+                    linksAccordion.appendChild(linkElement);
+                });
+            } else {
+                testLinksSection.style.display = 'none';
+            }
 
             // Update each section's table
             sections.forEach(section => {
@@ -81,14 +211,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Add results to table
-                Object.entries(results[section.name]).forEach(([test, value]) => {
+                Object.entries(results[section.name] || {}).forEach(([test, value]) => {
                     const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${test}</td>
-                        <td class="${value ? 'success' : 'failure'}">
-                            ${value ? '✓' : '✗'}
-                        </td>
-                    `;
+                    
+                    if (section.name === 'Sitemap') {
+                        // Special handling for sitemap results
+                        let statusClass = '';
+                        let displayValue = value;
+                        
+                        try {
+                            if (test === 'Sitemap Status') {
+                                statusClass = (value === 'Valid') ? 'success' : 'failure';
+                                displayValue = String(value || '');
+                            } else if (test === 'Total URLs Found') {
+                                const numValue = parseInt(value) || 0;
+                                statusClass = numValue > 0 ? 'success' : 'neutral';
+                                displayValue = String(numValue);
+                            } else if (test === 'Parse Error') {
+                                statusClass = (value === 'None') ? 'success' : 'failure';
+                                displayValue = String(value || '');
+                            }
+                            
+                            row.innerHTML = `
+                                <td>${String(test || '')}</td>
+                                <td class="${statusClass || ''}">${displayValue}</td>
+                            `;
+                        } catch (e) {
+                            console.error('Error processing sitemap result:', e);
+                            row.innerHTML = `
+                                <td>${String(test || '')}</td>
+                                <td class="neutral">N/A</td>
+                            `;
+                        }
+                    } else {
+                        // Original handling for other sections
+                        const isSuccess = Boolean(value);
+                        row.innerHTML = `
+                            <td>${String(test || '')}</td>
+                            <td class="${isSuccess ? 'success' : 'failure'}">
+                                ${isSuccess ? '✓' : '✗'}
+                            </td>
+                        `;
+                    }
+                    
+                    table.appendChild(row);
+                    
                     table.appendChild(row);
                 });
             });
