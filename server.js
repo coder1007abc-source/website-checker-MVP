@@ -143,17 +143,7 @@ async function testLinksOfLinks(url) {
     return results;
 }
 
-// CORS configuration
-const corsOptions = {
-    origin: ['http://localhost:3000', 'https://localhost:3000'],
-    methods: ['GET', 'POST'],
-    credentials: true,
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.static('public'));
+// Configure app (CORS and middleware already set up at the top)
 
 async function parseSitemap(sitemapUrl) {
     try {
