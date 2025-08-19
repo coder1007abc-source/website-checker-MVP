@@ -13,6 +13,30 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Serve static files with proper MIME types
+app.use(express.static('public', {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (path.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html');
+        }
+    }
+}));
+
+// CORS configuration
+const corsOptions = {
+    origin: ['http://localhost:3000', 'https://checklist-webapp.onrender.com'],
+    methods: ['GET', 'POST'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.use(express.json());
+
 // Function to normalize URL (convert relative to absolute)
 function normalizeUrl(baseUrl, href) {
     try {
